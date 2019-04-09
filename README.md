@@ -6,6 +6,15 @@ To run, look at `__main__` and change the global variables that set paths and se
 
 It was tested in one DB with `Python3` and works flawlessly. It's not very sophisticated but if it saves you a few hours than it is good enough for me.
 
+## Usage
+'''
+usage: h2-to-mysql.py [-h] --h2-db H2_DB [--h2-user H2_USER]
+                      [--h2-pass H2_PASS] --mysql-name MYSQL_NAME --mysql-host
+                      MYSQL_HOST [--mysql-user MYSQL_USER]
+                      [--mysql-pass MYSQL_PASS] [--use-existing]
+h2-to-mysql.py: error: the following arguments are required: --h2-db, --mysql-name, --mysql-host
+'''
+
 ### Some details
 
 The script reads H2 using [`JayDeBeApi`](https://pypi.python.org/pypi/JayDeBeApi/) with the H2 driver (the `h2-1.4.196.jar` included here) and writes to MySQL with [`PyMySQL`](https://github.com/PyMySQL/PyMySQL). These are the only two dependencies.

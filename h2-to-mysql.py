@@ -3,7 +3,6 @@ import jaydebeapi
 import datetime as dt
 import argparse
 
-
 class H2toMySQL:
     h2_connection = None
     mysql_connection = None
@@ -54,8 +53,10 @@ class H2toMySQL:
                 for r in res:
                     tables.append(r['Database'])
 
-            if MYSQL_DB_NAME in tables:
+            if (MYSQL_DB_NAME in tables) & USE_EXISTING:
                 print("Database %s already exists", MYSQL_DB_NAME);
+            elif USE_EXISTING:
+                raise Exception("Unable to find existing database")
             else:
                 query_mysql = "CREATE DATABASE %s;"
 
@@ -262,9 +263,10 @@ class H2toMySQL:
         print('Obtaining H2 DB info...')
         converter.get_h2_tables()
 
-        for table in converter.h2_tables:
-            print('Creating table %s...' % table)
-            converter.create_mysql_table(table)
+        if not USE_EXISTING:
+            for table in converter.h2_tables:
+                print('Creating table %s...' % table)
+                converter.create_mysql_table(table)
 
         for table in converter.h2_tables:
             print('Exporting table %s...' % table)
@@ -282,6 +284,7 @@ if __name__ == "__main__":
     parser.add_argument('--mysql-host', help='Host of the MySQL DB', required=True)
     parser.add_argument('--mysql-user', help='Username of the MySQL User', default="root")
     parser.add_argument('--mysql-pass', help='Password of the MySQL User', default="")
+    parser.add_argument('--use-existing', help='Don\'t create database and tables, use existing instead', action='store_true')
 
     args = parser.parse_args()
 
@@ -297,8 +300,14 @@ if __name__ == "__main__":
     MYSQL_DB_USER = args.mysql_user
     MYSQL_DB_PASS = args.mysql_pass
 
+    USE_EXISTING = args.use_existing
+
     # Number of entries being read and written at a time
     BATCH_SIZE = 1000
 
-    #converter = H2toMySQL()
-    #converter.export()
+
+    converter = H2toMySQL()
+    # If we don't want to use an existing database reset the db first
+    if not USE_EXISTING:
+        converter.reset_mysql()
+    converter.export()
