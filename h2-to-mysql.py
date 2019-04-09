@@ -1,6 +1,7 @@
 import pymysql
 import jaydebeapi
 import datetime as dt
+import argparse
 
 
 class H2toMySQL:
@@ -12,7 +13,7 @@ class H2toMySQL:
         print("Connecting to H2 DB '%s'..." % H2_DB_PATH)
         self.h2_connection = jaydebeapi.connect("org.h2.Driver",  # driver class
                                                 "jdbc:h2:" + H2_DB_PATH,
-                                                ["sa", ""],  # credentials
+                                                [H2_DB_USER, H2_DB_PASS],  # credentials
                                                 "./h2-1.4.196.jar", )  # location of H2 jar
 
         print("Connecting to MySQL DB '%s'" % MYSQL_DB_NAME)
@@ -54,11 +55,11 @@ class H2toMySQL:
                     tables.append(r['Database'])
 
             if MYSQL_DB_NAME in tables:
-                raise Exception("Database '%s' already exists." % MYSQL_DB_NAME)
+                print("Database %s already exists", MYSQL_DB_NAME);
+            else:
+                query_mysql = "CREATE DATABASE %s;"
 
-            query_mysql = "CREATE DATABASE %s;"
-
-            curs.execute(query_mysql % MYSQL_DB_NAME)
+                curs.execute(query_mysql % MYSQL_DB_NAME)
 
             self.mysql_connection.select_db(MYSQL_DB_NAME)
 
@@ -151,6 +152,7 @@ class H2toMySQL:
 
             curs = self.mysql_connection.cursor()
             query = query_mysql % (table, ', '.join(mysql_columns))
+            print(query)
             curs.execute(query)
 
         finally:
@@ -233,7 +235,6 @@ class H2toMySQL:
                 begin = dt.datetime.now()
 
                 query = query_mysql_insert % ', '.join(batch_export_data)
-                # print("  "+query)
                 curs_mysql.execute(query)
                 self.commit()
 
@@ -273,28 +274,31 @@ class H2toMySQL:
 
 
 if __name__ == "__main__":
-    # These should be passed on class initialization but I'm too lazy to change it now
+    parser = argparse.ArgumentParser(description='Migrate a H2 DB to MySQL/MariaDB')
+    parser.add_argument('--h2-db', help='The absolute path to the H2 DB, without the file extension', required=True)
+    parser.add_argument('--h2-user', help='Username of the H2 User', default="sa")
+    parser.add_argument('--h2-pass', help='Password of the H2 User', default="sa")
+    parser.add_argument('--mysql-name', help='Name of the MySQL DB', required=True)
+    parser.add_argument('--mysql-host', help='Host of the MySQL DB', required=True)
+    parser.add_argument('--mysql-user', help='Username of the MySQL User', default="root")
+    parser.add_argument('--mysql-pass', help='Password of the MySQL User', default="")
+
+    args = parser.parse_args()
 
     # Careful when providing the path to a H2 database.
     # You should provide the full path WITHOUT the extension.
     # https://stackoverflow.com/questions/23403875/how-to-see-all-tables-in-my-h2-database-at-localhost8082/34551665
-    H2_DB_PATH = 'path-to-H2'
+    H2_DB_PATH = args.h2_db
+    H2_DB_USER = args.h2_user
+    H2_DB_PASS = args.h2_pass
 
-    MYSQL_DB_NAME = 'H2Export'
-    MYSQL_DB_HOST = 'localhost'
-    MYSQL_DB_USER = 'user'
-    MYSQL_DB_PASS = 'root'
+    MYSQL_DB_NAME = args.mysql_name
+    MYSQL_DB_HOST = args.mysql_host
+    MYSQL_DB_USER = args.mysql_user
+    MYSQL_DB_PASS = args.mysql_pass
 
     # Number of entries being read and written at a time
     BATCH_SIZE = 1000
 
-    converter = H2toMySQL()
-    converter.reset_mysql()  # Unnecessary, for debugging only
-    converter.export()
-
-    # To test string escaping
-    # print( converter.escape_strings("'")  )
-    # print( converter.escape_strings("\"") )
-    # print( converter.escape_strings("\\") )
-    # print( converter.escape_strings('%')  )
-    # print( converter.escape_strings('_')  )
+    #converter = H2toMySQL()
+    #converter.export()
